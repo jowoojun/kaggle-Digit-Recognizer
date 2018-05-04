@@ -16,7 +16,7 @@ DATASET_PATH = './data/train.csv'
 
 # hyper parameters
 learning_rate = 0.001
-training_epochs = 1
+training_epochs = 30
 batch_size = 1000
 
 def _batch_loader(iterable, n=1):
@@ -28,7 +28,7 @@ def _batch_loader(iterable, n=1):
 sess = tf.Session()
 
 models = []
-num_models = 1
+num_models = 7
 for m in range(num_models):
     models.append(Model(sess, "model" + str(m), learning_rate))
 
@@ -47,13 +47,14 @@ for epoch in range(training_epochs):
     avg_cost_list = np.zeros(len(models))
     for i, (data, labels) in enumerate(_batch_loader(dataset, batch_size)):
         onehot_labels = sess.run(tf.one_hot(labels, 10, dtype=tf.float32))
-        x_train, x_test, y_train, y_test = train_test_split(data, onehot_labels, random_state = 42)
+        x_train, x_test, y_train, y_test = train_test_split(data, onehot_labels, test_size = 0.1, random_state = 42)
 
         # train each model
         for m_idx, m in enumerate(models):
             c, _ = m.train(x_train, y_train)
             avg_cost_list[m_idx] += c / one_batch_size
         
+        predictions = np.zeros([len(y_test), 10])
         for m_idx, m in enumerate(models):
             print(m_idx, 'Accuracy:', m.get_accuracy(x_test, y_test))
             p = m.predict(x_test)
@@ -85,7 +86,7 @@ for m_idx, m in enumerate(models):
     predictions += p
 
 # select the indix with the maximum probability
-results = np.argmax(predictions,axis = 1)
+results = np.argmax(predictions ,axis = 1)
 
 results = pd.Series(results,name="Label")
 
