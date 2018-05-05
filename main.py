@@ -16,8 +16,8 @@ DATASET_PATH = './data/train.csv'
 
 # hyper parameters
 learning_rate = 0.001
-training_epochs = 20
-batch_size = 2000
+training_epochs = 10
+batch_size = 20
 
 def _batch_loader(iterable, n=1):
     length = len(iterable)
@@ -30,7 +30,7 @@ sess = tf.Session()
 models = []
 num_models = 10
 for m in range(num_models):
-    models.append(Model(sess, "model" + str(m), learning_rate))
+    models.append(Model(sess, "model" + str(m), learning_rate, batch_size))
 
 sess.run(tf.global_variables_initializer())
 
@@ -45,26 +45,31 @@ for epoch in range(training_epochs):
         one_batch_size += 1
     
     avg_cost_list = np.zeros(len(models))
+    x_test = np.zeros([int(batch_size * 0.1), 784])
+    y_test = np.zeros([int(batch_size * 0.1), 10])
     for i, (data, labels) in enumerate(_batch_loader(dataset, batch_size)):
         onehot_labels = sess.run(tf.one_hot(labels, 10, dtype=tf.float32))
-        x_train, x_test, y_train, y_test = train_test_split(data, onehot_labels, test_size = 0.1, random_state = 42)
+        x_train, x_test_batch, y_train, y_test_batch = train_test_split(data, onehot_labels, test_size = 0.1, random_state = 42)
 
         # train each model
         for m_idx, m in enumerate(models):
             c, _ = m.train(x_train, y_train)
             avg_cost_list[m_idx] += c / one_batch_size
-        
-        predictions = np.zeros([len(y_test), 10])
-        for m_idx, m in enumerate(models):
-            print(m_idx, 'Accuracy:', m.get_accuracy(x_test, y_test))
-            p = m.predict(x_test)
-            predictions += p
 
-        ensemble_correct_prediction = tf.equal(
-            tf.argmax(predictions, 1), tf.argmax(y_test, 1))
-        ensemble_accuracy = tf.reduce_mean(
-            tf.cast(ensemble_correct_prediction, tf.float32))
-        print('Ensemble accuracy:', sess.run(ensemble_accuracy))
+        x_test += x_test_batch
+        y_test += y_test_batch
+        
+    predictions = np.zeros([len(y_test), 10])
+    for m_idx, m in enumerate(models):
+        print(m_idx, 'Accuracy:', m.get_accuracy(x_test, y_test))
+        p = m.predict(x_test)
+        predictions += p
+
+    ensemble_correct_prediction = tf.equal(
+        tf.argmax(predictions, 1), tf.argmax(y_test, 1))
+    ensemble_accuracy = tf.reduce_mean(
+        tf.cast(ensemble_correct_prediction, tf.float32))
+    print(epoch, 'th Ensemble accuracy:', sess.run(ensemble_accuracy))
 
 
 
