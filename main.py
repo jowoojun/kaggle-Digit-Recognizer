@@ -16,8 +16,8 @@ DATASET_PATH = './data/train.csv'
 
 # hyper parameters
 learning_rate = 0.001
-training_epochs = 30
-batch_size = 1000
+training_epochs = 20
+batch_size = 2000
 
 def _batch_loader(iterable, n=1):
     length = len(iterable)
@@ -28,7 +28,7 @@ def _batch_loader(iterable, n=1):
 sess = tf.Session()
 
 models = []
-num_models = 7
+num_models = 10
 for m in range(num_models):
     models.append(Model(sess, "model" + str(m), learning_rate))
 
@@ -79,11 +79,15 @@ test_data = pd.read_csv(TESTSET_PATH)
 x_test = test_data / 255.0
 test_dataset_len = len(test_data)
 
+del test_data
+
 predictions = np.zeros([test_dataset_len, 10])
 
 for m_idx, m in enumerate(models):
     p = m.predict(x_test)
     predictions += p
+
+del x_test
 
 # select the indix with the maximum probability
 results = np.argmax(predictions ,axis = 1)
