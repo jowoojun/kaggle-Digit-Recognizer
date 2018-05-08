@@ -17,7 +17,7 @@ class Model:
             learning_rate = tf.train.exponential_decay(
               0.01,                           # Base learning rate.
               global_step * self.batch_size,  # Current index into the dataset.
-              2000,                           # Decay step.
+              1000,                           # Decay step.
               0.90,                           # Decay rate.
               staircase=True)
 

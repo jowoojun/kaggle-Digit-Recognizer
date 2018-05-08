@@ -6,18 +6,12 @@ from model import Model
 from dataset import MnistDataset
 
 # Load the data
-#train = pd.read_csv("./data/train.csv")
-#test = pd.read_csv("./data/test.csv")
-
-#test = test / 255.0
-
 DATASET_PATH = './data/train.csv'
-
 
 # hyper parameters
 learning_rate = 0.001
 training_epochs = 10
-batch_size = 20
+batch_size = 16
 
 def _batch_loader(iterable, n=1):
     length = len(iterable)
@@ -45,33 +39,28 @@ for epoch in range(training_epochs):
         one_batch_size += 1
     
     avg_cost_list = np.zeros(len(models))
-    x_test = np.zeros([int(batch_size * 0.1), 784])
-    y_test = np.zeros([int(batch_size * 0.1), 10])
     for i, (data, labels) in enumerate(_batch_loader(dataset, batch_size)):
         onehot_labels = sess.run(tf.one_hot(labels, 10, dtype=tf.float32))
-        x_train, x_test_batch, y_train, y_test_batch = train_test_split(data, onehot_labels, test_size = 0.1, random_state = 42)
 
         # train each model
         for m_idx, m in enumerate(models):
-            c, _ = m.train(x_train, y_train)
+            c, _ = m.train(data, onehot_labels)
             avg_cost_list[m_idx] += c / one_batch_size
 
-        x_test += x_test_batch
-        y_test += y_test_batch
-        
-    predictions = np.zeros([len(y_test), 10])
+    (data, labels) = _batch_loader(dataset, dataset_len)
+    onehot_labels = sess.run(tf.onehot_labels(labels, 10, dtype=tf.float32))
+
+    predictions = np.zeros([len(onehot_labels), 10])
     for m_idx, m in enumerate(models):
-        print(m_idx, 'Accuracy:', m.get_accuracy(x_test, y_test))
-        p = m.predict(x_test)
+        print(m_idx, 'Accuracy:', m.get_accuracy(data, onehot_labels))
+        p = m.predict(data)
         predictions += p
 
     ensemble_correct_prediction = tf.equal(
-        tf.argmax(predictions, 1), tf.argmax(y_test, 1))
+        tf.argmax(predictions, 1), tf.argmax(onehot_labels, 1))
     ensemble_accuracy = tf.reduce_mean(
         tf.cast(ensemble_correct_prediction, tf.float32))
     print(epoch, 'th Ensemble accuracy:', sess.run(ensemble_accuracy))
-
-
 
     print('Epoch:', '%04d' % (epoch + 1), 'cost =', avg_cost_list)
 
@@ -86,6 +75,9 @@ test_dataset_len = len(test_data)
 
 del test_data
 
+output_file = "cnn_mnist_datagen.csv"
+
+# select the indix with the maximum probability
 predictions = np.zeros([test_dataset_len, 10])
 
 for m_idx, m in enumerate(models):
@@ -94,12 +86,18 @@ for m_idx, m in enumerate(models):
 
 del x_test
 
-# select the indix with the maximum probability
-results = np.argmax(predictions ,axis = 1)
+y_pred = np.argmax(predictions,axis=1)
 
-results = pd.Series(results,name="Label")
+with open(output_file, 'w') as f :
+    f.write('ImageId,Label\n')
+    for i in range(len(y_pred)) :
+        f.write("".join([str(i+1),',',str(y_pred[i]),'\n']))
 
-submission = pd.concat([pd.Series(range(1,28001),name = "ImageId"),results],axis = 1)
+#results = np.argmax(predictions ,axis = 1)
 
-submission.to_csv("cnn_mnist_datagen.csv",index=False)
+#results = pd.Series(results,name="Label")
+
+#submission = pd.concat([pd.Series(range(1,28001),name = "ImageId"),results],axis = 1)
+
+#submission.to_csv("cnn_mnist_datagen.csv",index=False)
 
